@@ -1,8 +1,10 @@
 import pyscreenshot as ImageGrab
 import numpy as np
 import time
-import tkinter as tk
-from tkinter import messagebox
+from PyQt5.QtWidgets import QApplication, QLabel, QPushButton, QVBoxLayout, QWidget
+from PyQt5.QtGui import QFont, QPalette, QColor  # Importar QFont desde PyQt5.QtGui
+from PyQt5.QtCore import Qt
+
 
 # Definir tamaño de celda y frecuencia de muestreo
 cell_size = 50
@@ -16,16 +18,41 @@ warning_shown = False  # Variable para controlar si se mostró la alerta
 # Función para mostrar aviso en pantalla
 def show_warning():
     global warning_shown
-    root = tk.Tk()
-    root.attributes('-fullscreen', True)  # Maximizar la ventana
-    root.attributes('-topmost', True)      # Asegurar que esté en la parte superior
-    root.config(bg='black')               # Fondo negro para ocultar contenido anterior
-    label = tk.Label(root, text="Alerta: Se detectaron cambios bruscos en la pantalla.", font=("Arial", 48), fg="white", bg="black")
-    label.pack(expand=True)  # Expandir para llenar toda la ventana
-    root.update()  # Actualizar la ventana para que se muestre inmediatamente
-    root.after(2000, root.destroy)  # Cerrar la ventana después de 2 segundos
-    warning_shown = True  # Marcar que la alerta se mostró
+    app = QApplication([])
 
+    # Configuración de la ventana
+    window = QWidget()
+    window.setWindowTitle("Alerta de Epilepsia")
+    window.setStyleSheet("background-color: black;")
+    window.showFullScreen()
+
+    # Configuración del texto
+    label = QLabel("Alerta: Se detectaron cambios bruscos en la pantalla.")
+    label.setFont(QFont('Arial', 48))
+    label.setStyleSheet("color: white;")
+    label.setAlignment(Qt.AlignCenter)
+
+    # Configuración del botón
+    close_button = QPushButton("Cerrar Alerta")
+    close_button.setFont(QFont('Arial', 24))
+    close_button.setStyleSheet("background-color: darkred; color: white;")
+    close_button.clicked.connect(lambda: close_warning(window))
+
+    # Diseño de la ventana
+    layout = QVBoxLayout()
+    layout.addWidget(label)
+    layout.addWidget(close_button)
+    window.setLayout(layout)
+
+    warning_shown = True
+    app.exec_()
+
+# Función para cerrar la ventana de aviso
+def close_warning(root):
+    global warning_shown
+    root.destroy()
+    warning_shown = False
+    time.sleep(2)  # Agregar pausa de 2 segundos después de cerrar la ventana
 # Bucle principal
 while True:
     # Capturar imagen de la pantalla
@@ -69,16 +96,15 @@ while True:
     current_mean_rgb = np.array([mean_r, mean_g, mean_b])
 
     # Verificar si hay cambios bruscos (solo después de la primera iteración)
-    if prev_mean_rgb is not None and not warning_shown:  # Verificar si se mostró la alerta
+    if prev_mean_rgb is not None:
         diff = np.abs(current_mean_rgb - prev_mean_rgb)
-        if np.any(diff > threshold):
+        if np.any(diff > threshold) and not warning_shown:  # Verificar si se mostró la alerta
             show_warning()
 
-    # Actualizar valor previo y reiniciar warning_shown si es necesario
+    # Actualizar valor previo
     prev_mean_rgb = current_mean_rgb
-    if warning_shown:
-        time.sleep(2)  # Esperar 2 segundos después de mostrar la alerta
-        warning_shown = False  # Reiniciar el estado de la alerta
-
+    
     # Esperar para cumplir con la frecuencia de muestreo
     time.sleep(1 / sample_rate)
+
+   
